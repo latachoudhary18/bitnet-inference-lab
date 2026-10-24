@@ -1,0 +1,14 @@
+F32 inference experiment
+Date: 2026-10-25 02:38:28
+Model: BitNet-b1.58-2B-4T, ggml-model-f32.gguf
+Backend: CPU
+Threads: 4
+Context size: 128
+Requested generation: 8 tokens
+Prompt: The capital of France is
+Observed output: 1. it. a the (
+Prompt processing speed: 24.1 tokens/s
+Generation speed: 5.1 tokens/s
+Result: FAILED — output is not coherent
+Interpretation: Model loads, but valid inference is not established.
+Important: Single short run; speed values are preliminary, not benchmark conclusions.
