@@ -1,0 +1,10 @@
+BitNet baseline test
+Date: 2026-10-25 01:36:21
+Repository commit: 0b341e5
+Model: microsoft/BitNet-b1.58-2B-4T-gguf
+Local model: models/BitNet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
+Backend: CPU only (GGML_CUDA=OFF)
+Observed output: repeated question-mark characters
+Status: FAILED — valid inference not established
+Notes: llama-gguf.exe assertion expects a hard-coded value; not treated as proof of corruption.
+Upstream report: https://github.com/microsoft/BitNet/issues/608

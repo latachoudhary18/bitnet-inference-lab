@@ -1,0 +1,10 @@
+BitNet GGUF Inspection
+Repository commit: 0b341e5
+Model file size: 1187801280 bytes
+GGUF tensor count: 332
+Selected tensors inspected: 150
+Inspection method: count nonzero bytes in selected quantized tensor arrays
+Result: all 150 selected tensors contained nonzero bytes
+Limitation: nonzero stored bytes do not prove decoded weights or model inference are correct
+Inference status: FAILED — generated question marks
+Next action: investigate inference compatibility and verify a working baseline
