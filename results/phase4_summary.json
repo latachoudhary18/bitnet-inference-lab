@@ -1,0 +1,37 @@
+{
+  "total_runs": 1,
+  "status_counts": {
+    "timeout": 1
+  },
+  "successful_processes": 0,
+  "timed_out_runs": 1,
+  "process_failures": 0,
+  "reliability_passes": 0,
+  "reliability_failures": 0,
+  "runs_without_assessment": 1,
+  "elapsed_seconds": {
+    "measurement_count": 1,
+    "mean": 180.072
+  },
+  "model_load_ms": {
+    "measurement_count": 0,
+    "mean": null
+  },
+  "prompt_tokens_per_second": {
+    "measurement_count": 0,
+    "mean": null
+  },
+  "generation_tokens_per_second": {
+    "measurement_count": 0,
+    "mean": null
+  },
+  "fastest_eligible_run": null,
+  "selection_note": "No eligible configuration: require a completed process, a passing heuristic assessment, and an explicit generation-speed measurement.",
+  "limitations": [
+    "A completed process and heuristic pass do not establish semantic correctness.",
+    "Token throughput is reported only when parsed from explicit backend performance logs; it is never estimated from output characters.",
+    "CPU and memory usage are not measured by this runner.",
+    "Missing metrics mean the backend did not expose a recognized measurement.",
+    "Legacy log schemas are normalized where possible; absent fields remain unavailable."
+  ]
+}

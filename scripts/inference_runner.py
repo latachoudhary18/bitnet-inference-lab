@@ -1,6 +1,7 @@
 
 import argparse
 import json
+import re
 import subprocess
 import time
 from datetime import datetime, timezone
@@ -29,6 +30,49 @@ DEFAULT_MODEL = (
 )
 
 
+
+def parse_performance_metrics(log_text):
+    """Parse explicit llama.cpp performance lines; never infer tokens/sec from characters."""
+    metrics = {}
+    patterns = {
+        "model_load_ms": [
+            r"load time\s*=\s*([\d.]+)\s*ms",
+        ],
+        "prompt_eval_ms": [
+            r"prompt eval time\s*=\s*([\d.]+)\s*ms",
+        ],
+        "prompt_tokens": [
+            r"prompt eval time\s*=\s*[\d.]+\s*ms\s*/\s*(\d+)\s*tokens",
+        ],
+        "prompt_tokens_per_second": [
+            r"prompt eval time\s*=\s*[\d.]+\s*ms\s*/\s*\d+\s*tokens\s*\(\s*([\d.]+)\s*tokens per second\s*\)",
+            r"prompt eval time\s*=\s*[\d.]+\s*ms\s*/\s*\d+\s*tokens\s*\(\s*([\d.]+)\s*t/s\s*\)",
+        ],
+        "generation_eval_ms": [
+            r"eval time\s*=\s*([\d.]+)\s*ms",
+        ],
+        "generation_tokens": [
+            r"eval time\s*=\s*[\d.]+\s*ms\s*/\s*(\d+)\s*runs",
+        ],
+        "generation_tokens_per_second": [
+            r"eval time\s*=\s*[\d.]+\s*ms\s*/\s*\d+\s*runs\s*\(\s*([\d.]+)\s*tokens per second\s*\)",
+            r"eval time\s*=\s*[\d.]+\s*ms\s*/\s*\d+\s*runs\s*\(\s*([\d.]+)\s*t/s\s*\)",
+        ],
+        "backend_total_ms": [
+            r"total time\s*=\s*([\d.]+)\s*ms",
+        ],
+    }
+    for key, candidates in patterns.items():
+        for pattern in candidates:
+            matches = re.findall(pattern, log_text, flags=re.IGNORECASE)
+            if matches:
+                raw = matches[-1]
+                metrics[key] = int(raw) if key in {"prompt_tokens", "generation_tokens"} else float(raw)
+                break
+    metrics["metrics_source"] = "llama.cpp performance log" if metrics else None
+    return metrics
+
+
 def run_inference(cli, model, prompt, threads, ctx_size,
                   predict, timeout, output_file):
     cli = Path(cli).expanduser().resolve()
@@ -43,6 +87,8 @@ def run_inference(cli, model, prompt, threads, ctx_size,
         "ctx_size": ctx_size,
         "requested_tokens": predict,
         "timeout_seconds": timeout,
+        "hardware_profile_path": "results/system_info.json",
+        "resource_usage_status": "not_measured_by_this_runner",
     }
 
     if not cli.is_file():
@@ -101,15 +147,33 @@ def run_inference(cli, model, prompt, threads, ctx_size,
             "combined_log": combined,
         })
 
+    
     except subprocess.TimeoutExpired as exc:
         elapsed = time.perf_counter() - start
+
+        def decode_output(value):
+            if value is None:
+                return ""
+            if isinstance(value, bytes):
+                return value.decode("utf-8", errors="replace")
+            return value
+
+        stdout = decode_output(exc.stdout)
+        stderr = decode_output(exc.stderr)
+
         record.update({
             "status": "timeout",
             "elapsed_seconds": round(elapsed, 3),
-            "stdout": str(exc.stdout or ""),
-            "stderr": str(exc.stderr or ""),
+            "return_code": None,
+            "stdout": stdout,
+            "stderr": stderr,
+            "combined_log": stdout + "\n" + stderr,
+            "output_characters": len(stdout.strip()),
+            "output_nonempty": bool(stdout.strip()),
             "error": f"Inference exceeded {timeout} seconds",
         })
+        record.update(parse_performance_metrics(stdout + "\\n" + stderr))
+
 
     except OSError as exc:
         record.update({
