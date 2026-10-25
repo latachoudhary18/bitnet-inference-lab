@@ -8,3 +8,7 @@ __pycache__/
 build/
 models/
 .cache/
+
+__pycache__/
+.pytest_cache/
+*.pyc
