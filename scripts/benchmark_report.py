@@ -25,13 +25,25 @@ def load_records(path: Path) -> list[dict[str, Any]]:
 
 
 def _execution_status(row):
-    if row.get("execution_status"):
-        return row["execution_status"]
-    status = row.get("status")
-    return {
-        "completed": "success", "process_error": "error",
-        "execution_error": "error", "configuration_error": "missing_file",
-    }.get(status, status)
+    """Normalize current and legacy execution-status fields."""
+    status = row.get("execution_status") or row.get("status")
+    if status:
+        return {
+            "completed": "success",
+            "process_error": "error",
+            "execution_error": "error",
+            "configuration_error": "missing_file",
+        }.get(status, status)
+
+    # Older records stored timeout as a boolean and omitted execution_status.
+    if row.get("timed_out") is True:
+        return "timeout"
+    exit_code = row.get("exit_code", row.get("return_code"))
+    if exit_code == 0:
+        return "success"
+    if exit_code is not None:
+        return "error"
+    return None
 
 
 def _reliability_status(row):
