@@ -63,6 +63,19 @@ The demo covers representative successful output, suspicious question marks,
 process error, timeout, and missing-file cases. These are synthetic records, not
 benchmark evidence.
 
+## Primary workflow and legacy scripts
+
+The recommended workflow for new runs is `scripts/inference_runner.py` followed
+by `scripts/benchmark_report.py`. These use the reliability-aware schema and
+retain legacy aliases for existing consumers.
+
+The repository also retains `scripts/inference_check.py` and
+`scripts/config_selector.py` for the earlier benchmark format. They write/read
+records with fields such as `assessment.status`, `timed_out`, and
+`generation_tokens_per_second`. Use these only when working with older logs;
+avoid mixing their output files with new-run logs unless you intentionally want
+the report's legacy compatibility path to normalize them.
+
 ## Run an inference record
 
 Use module invocation from the repository root so Python can resolve the
@@ -104,6 +117,20 @@ Each new runner record contains:
 Legacy aliases are retained in runner records for compatibility. The report
 also recognizes older fields such as `timed_out`, `generation_tokens_per_second`,
 and `assessment.status` where present. Missing values are not estimated.
+
+## Reproduce the recorded summary
+
+The checked-in `results/benchmark_summary.json` is generated from the historical
+`results/benchmark_log.jsonl` record using the current report code:
+
+```powershell
+python -m scripts.benchmark_report --input results/benchmark_log.jsonl --output results/benchmark_summary.json
+```
+
+That historical record is a timeout with failed heuristic assessment. The
+summary is evidence of a failed run, not a performance result. Other summary
+files under `results/` may refer to different input logs or earlier stages;
+check their source logs before comparing counts.
 
 ## Hardware profile
 
