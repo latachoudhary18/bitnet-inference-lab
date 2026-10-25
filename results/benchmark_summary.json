@@ -1,0 +1,14 @@
+{
+  "total_runs": 1,
+  "successful_processes": 0,
+  "timed_out_runs": 1,
+  "process_failures": 0,
+  "reliability_passes": 0,
+  "reliability_failures": 1,
+  "runs_without_assessment": 0,
+  "prompt_speed_measurements": 0,
+  "generation_speed_measurements": 0,
+  "fastest_eligible_run": null,
+  "selection_note": "No eligible configuration: no run passed the heuristic gate with a successful process and a measured generation speed.",
+  "limitation": "Heuristic checks do not establish semantic correctness. Captured output and speed measurements require interpretation."
+}

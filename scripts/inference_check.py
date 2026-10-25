@@ -47,6 +47,7 @@ def parse_speed(text: str, label: str) -> float | None:
     return float(match.group(1)) if match else None
 
 
+
 def run_inference(
     cli: str,
     model: str,
@@ -61,52 +62,77 @@ def run_inference(
         "--ctx-size", str(context_size), "--n-gpu-layers", "0",
         "--n-predict", str(predict), "--prompt", prompt,
     ]
+
     started = time.perf_counter()
-    try:
-        completed = subprocess.run(
-            command, capture_output=True, text=True, timeout=timeout, check=False
-        )
-        elapsed = time.perf_counter() - started
-        combined = (completed.stdout or "") + "\n" + (completed.stderr or "")
-        # Keep the full output in the record so the run is auditable.
-        assessment = assess_output(combined)
+
+    def build_result(
+        elapsed: float,
+        stdout: str,
+        stderr: str,
+        exit_code: int | None,
+        timed_out: bool,
+    ) -> dict[str, Any]:
+        combined = stdout + "\n" + stderr
+
         return {
             "model": str(model),
             "cli": str(cli),
             "prompt": prompt,
             "settings": {
-                "threads": threads, "context_size": context_size,
-                "n_predict": predict, "gpu_layers": 0,
+                "threads": threads,
+                "context_size": context_size,
+                "n_predict": predict,
+                "gpu_layers": 0,
             },
             "elapsed_seconds": round(elapsed, 3),
-            "exit_code": completed.returncode,
+            "exit_code": exit_code,
             "prompt_tokens_per_second": parse_speed(combined, "Prompt"),
             "generation_tokens_per_second": parse_speed(combined, "Generation"),
-            "assessment": assessment,
+            "assessment": assess_output(stdout),
+            "stdout": stdout,
+            "stderr": stderr,
             "raw_output": combined,
             "command": command,
-            "timed_out": False,
+            "timed_out": timed_out,
         }
+
+    try:
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=timeout,
+            check=False,
+        )
+
+        elapsed = time.perf_counter() - started
+
+        return build_result(
+            elapsed=elapsed,
+            stdout=completed.stdout or "",
+            stderr=completed.stderr or "",
+            exit_code=completed.returncode,
+            timed_out=False,
+        )
+
     except subprocess.TimeoutExpired as exc:
         elapsed = time.perf_counter() - started
-        partial = (exc.stdout or "") + "\n" + (exc.stderr or "")
-        if isinstance(partial, bytes):
-            partial = partial.decode(errors="replace")
-        return {
-            "model": str(model), "cli": str(cli), "prompt": prompt,
-            "settings": {
-                "threads": threads, "context_size": context_size,
-                "n_predict": predict, "gpu_layers": 0,
-            },
-            "elapsed_seconds": round(elapsed, 3),
-            "exit_code": None,
-            "prompt_tokens_per_second": None,
-            "generation_tokens_per_second": None,
-            "assessment": assess_output(partial),
-            "raw_output": partial,
-            "command": command,
-            "timed_out": True,
-        }
+
+        def decode(value: str | bytes | None) -> str:
+            if value is None:
+                return ""
+            if isinstance(value, bytes):
+                return value.decode("utf-8", errors="replace")
+            return value
+
+        return build_result(
+            elapsed=elapsed,
+            stdout=decode(exc.stdout),
+            stderr=decode(exc.stderr),
+            exit_code=None,
+            timed_out=True,
+        )
 
 
 def main() -> int:

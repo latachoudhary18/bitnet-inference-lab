@@ -44,5 +44,111 @@ class SelectorTests(unittest.TestCase):
         self.assertIsNone(select_configuration(results))
 
 
+from unittest.mock import patch, MagicMock
+from scripts.inference_check import run_inference
+
+
+class InferenceRunnerTests(unittest.TestCase):
+    @patch("scripts.inference_check.subprocess.run")
+    def test_stderr_diagnostics_do_not_fail_clean_stdout(self, mock_run):
+        mock_run.return_value = MagicMock(
+            stdout="The capital of France is Paris.",
+            stderr="Loading model...\nPrompt: 10.0 t/s\nGeneration: 5.0 t/s",
+            returncode=0,
+        )
+
+        result = run_inference(
+            cli="fake-cli",
+            model="fake-model.gguf",
+            prompt="Test prompt",
+            timeout=2,
+        )
+
+        self.assertEqual(result["assessment"]["status"], "pass_heuristic")
+        self.assertIn("Loading model", result["stderr"])
+        self.assertEqual(result["generation_tokens_per_second"], 5.0)
+        mock_run.assert_called_once()
+
+    @patch("scripts.inference_check.subprocess.run")
+    def test_empty_stdout_fails_even_when_stderr_has_logs(self, mock_run):
+        mock_run.return_value = MagicMock(
+            stdout="",
+            stderr="Model loaded successfully.",
+            returncode=0,
+        )
+
+        result = run_inference(
+            cli="fake-cli",
+            model="fake-model.gguf",
+            prompt="Test prompt",
+            timeout=2,
+        )
+
+        self.assertEqual(result["assessment"]["status"], "fail")
+        self.assertIn("empty_output", result["assessment"]["flags"])
+
+
+from scripts.benchmark_report import summarize
+
+
+class BenchmarkReportTests(unittest.TestCase):
+    def test_timeout_is_reported_and_not_selected(self):
+        records = [
+            {
+                "exit_code": None,
+                "timed_out": True,
+                "generation_tokens_per_second": None,
+                "assessment": {
+                    "status": "fail",
+                    "flags": ["high_repetition"],
+                },
+            }
+        ]
+
+        summary = summarize(records)
+
+        self.assertEqual(summary["total_runs"], 1)
+        self.assertEqual(summary["timed_out_runs"], 1)
+        self.assertEqual(summary["successful_processes"], 0)
+        self.assertIsNone(summary["fastest_eligible_run"])
+
+    def test_fastest_eligible_run_is_selected(self):
+        records = [
+            {
+                "exit_code": 0,
+                "timed_out": False,
+                "generation_tokens_per_second": 2.0,
+                "assessment": {"status": "pass_heuristic"},
+            },
+            {
+                "exit_code": 0,
+                "timed_out": False,
+                "generation_tokens_per_second": 5.0,
+                "assessment": {"status": "pass_heuristic"},
+            },
+        ]
+
+        summary = summarize(records)
+
+        self.assertEqual(
+            summary["fastest_eligible_run"]["generation_tokens_per_second"],
+            5.0,
+        )
+
+    def test_fast_but_failed_run_is_not_selected(self):
+        records = [
+            {
+                "exit_code": 0,
+                "timed_out": False,
+                "generation_tokens_per_second": 100.0,
+                "assessment": {"status": "fail"},
+            }
+        ]
+
+        summary = summarize(records)
+
+        self.assertIsNone(summary["fastest_eligible_run"])
+
+
 if __name__ == "__main__":
     unittest.main()
