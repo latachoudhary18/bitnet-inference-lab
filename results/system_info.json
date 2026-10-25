@@ -1,0 +1,47 @@
+{
+  "collected_at_utc": "2026-10-25T07:32:21.467868+00:00",
+  "project_root": "C:\\Users\\Lata\\bitnet-hardware-reliability",
+  "operating_system": {
+    "system": "Windows",
+    "release": "10",
+    "version": "10.0.26200",
+    "windows_name": "Microsoft Windows 11 Home Single Language",
+    "windows_version": "10.0.26200",
+    "windows_build": "26200",
+    "machine_architecture": "AMD64"
+  },
+  "python": {
+    "version": "3.10.11",
+    "executable": "C:\\Users\\Lata\\source\\repos\\BitNet\\.venv\\Scripts\\python.exe"
+  },
+  "cpu": {
+    "model": "AMD Ryzen 7 7435HS                             ",
+    "architecture_code_from_windows": 9,
+    "physical_cores_reported_by_windows": 8,
+    "logical_processors_reported_by_windows": 16,
+    "logical_processors_seen_by_python": 16
+  },
+  "memory": {
+    "total_bytes": 25439199232,
+    "total_gib": 23.69
+  },
+  "gpus": [
+    {
+      "name": "NVIDIA GeForce RTX 3050 A Laptop GPU",
+      "adapter_ram_bytes_reported_by_windows": 4292870144,
+      "driver_version": "32.0.15.9166",
+      "note": "Windows AdapterRAM can be inaccurate for some GPUs; a missing value does not mean the GPU has no VRAM."
+    }
+  ],
+  "bitnet_cli": {
+    "path": "C:\\Users\\Lata\\source\\repos\\BitNet\\build\\bin\\Release\\llama-cli.exe",
+    "exists": true,
+    "size_bytes": 10917376
+  },
+  "limitations": [
+    "GPU detection uses Windows CIM; reported adapter memory may be inaccurate.",
+    "GPU detection does not prove that BitNet uses the GPU.",
+    "CPU instruction-set support and actual inference performance are not benchmarked by this profiler.",
+    "Missing fields mean the information could not be collected."
+  ]
+}
