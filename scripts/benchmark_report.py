@@ -3,12 +3,10 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from statistics import mean
 from typing import Any
 
 
 def load_records(path: Path) -> list[dict[str, Any]]:
-    """Load JSONL records and reject malformed lines with a useful line number."""
     records: list[dict[str, Any]] = []
     if not path.exists():
         return records
@@ -17,119 +15,120 @@ def load_records(path: Path) -> list[dict[str, Any]]:
             if not line.strip():
                 continue
             try:
-                row = json.loads(line)
+                record = json.loads(line)
             except json.JSONDecodeError as exc:
                 raise ValueError(f"Invalid JSON on line {line_number}: {exc}") from exc
-            if not isinstance(row, dict):
+            if not isinstance(record, dict):
                 raise ValueError(f"Expected a JSON object on line {line_number}")
-            records.append(row)
+            records.append(record)
     return records
 
 
-def _status(row: dict[str, Any]) -> str:
-    """Support both inference_runner and the older inference_check log schema."""
-    if row.get("status"):
-        return str(row["status"])
-    if row.get("timed_out", False):
-        return "timeout"
-    code = row.get("exit_code", row.get("return_code"))
-    if code == 0:
-        return "completed"
-    if code is not None:
-        return "process_error"
-    return "unknown"
+def _execution_status(row):
+    if row.get("execution_status"):
+        return row["execution_status"]
+    status = row.get("status")
+    return {
+        "completed": "success", "process_error": "error",
+        "execution_error": "error", "configuration_error": "missing_file",
+    }.get(status, status)
+
+
+def _reliability_status(row):
+    reliability = row.get("reliability")
+    if isinstance(reliability, dict) and reliability.get("status"):
+        return reliability["status"]
+    assessment = row.get("assessment")
+    if isinstance(assessment, dict):
+        old = assessment.get("status")
+        return {"pass_heuristic": "PASS", "fail": "FAIL"}.get(old, old)
+    return None
+
+
+def _elapsed(row):
+    timing = row.get("timing")
+    if isinstance(timing, dict) and isinstance(timing.get("total_seconds"), (int, float)):
+        return timing["total_seconds"]
+    value = row.get("elapsed_seconds")
+    return value if isinstance(value, (int, float)) else None
+
+
+def _metric(row, schema_key, legacy_key):
+    performance = row.get("performance")
+    if isinstance(performance, dict):
+        value = performance.get(schema_key)
+        if isinstance(value, (int, float)):
+            return value
+    value = row.get(legacy_key)
+    return value if isinstance(value, (int, float)) else None
+
+
+def _stats(values):
+    return {
+        "measurement_count": len(values),
+        "mean": round(sum(values) / len(values), 4) if values else None,
+    }
 
 
 def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
-    statuses = [_status(row) for row in records]
-    completed = [row for row, status in zip(records, statuses) if status == "completed"]
-    timed_out = [row for row, status in zip(records, statuses) if status == "timeout"]
-    process_failures = [
-        row for row, status in zip(records, statuses)
-        if status in {"process_error", "execution_error", "configuration_error"}
-    ]
+    statuses = [_execution_status(r) for r in records]
+    successful = [r for r in records if _execution_status(r) == "success"
+                  and r.get("exit_code", r.get("return_code")) == 0]
+    timed_out = [r for r in records if _execution_status(r) == "timeout"]
+    process_failures = [r for r in records if _execution_status(r) == "error"]
+    reliability = [_reliability_status(r) for r in records]
+    passes = reliability.count("PASS") + reliability.count("pass_heuristic")
+    warnings = reliability.count("WARNING") + reliability.count("warning")
+    failures = reliability.count("FAIL") + reliability.count("fail")
 
-    assessments = [
-        row.get("assessment", {}).get("status")
-        for row in records if isinstance(row.get("assessment"), dict)
-    ]
-    reliability_passes = assessments.count("pass_heuristic")
-    reliability_failures = assessments.count("fail")
+    prompt_speeds = [v for r in records if (v := _metric(r, "prompt_tps", "prompt_tokens_per_second")) is not None]
+    generation_speeds = [v for r in records if (v := _metric(r, "gen_tps", "generation_tokens_per_second")) is not None]
+    elapsed_values = [v for r in records if (v := _elapsed(r)) is not None]
+    model_load = [r["model_load_ms"] for r in records if isinstance(r.get("model_load_ms"), (int, float))]
 
     eligible = []
     for row in records:
-        assessment = row.get("assessment", {})
-        speed = row.get("generation_tokens_per_second")
-        if (
-            _status(row) == "completed"
-            and isinstance(assessment, dict)
-            and assessment.get("status") == "pass_heuristic"
-            and isinstance(speed, (int, float))
-        ):
+        status = _execution_status(row)
+        exit_code = row.get("exit_code", row.get("return_code"))
+        speed = _metric(row, "gen_tps", "generation_tokens_per_second")
+        if status == "success" and exit_code == 0 and _reliability_status(row) == "PASS" and speed is not None:
             eligible.append(row)
-
-    fastest = max(eligible, key=lambda row: row["generation_tokens_per_second"], default=None)
-
-    def numeric_values(key: str) -> list[float]:
-        return [
-            float(row[key]) for row in records
-            if isinstance(row.get(key), (int, float))
-        ]
-
-    elapsed = numeric_values("elapsed_seconds")
-    prompt_speeds = numeric_values("prompt_tokens_per_second")
-    generation_speeds = numeric_values("generation_tokens_per_second")
-    load_times = numeric_values("model_load_ms")
+    fastest = max(eligible, key=lambda r: _metric(r, "gen_tps", "generation_tokens_per_second"), default=None)
 
     return {
         "total_runs": len(records),
-        "status_counts": {status: statuses.count(status) for status in sorted(set(statuses))},
-        "successful_processes": len(completed),
+        "status_counts": {s: statuses.count(s) for s in sorted(set(statuses))},
+        "successful_processes": len(successful),
         "timed_out_runs": len(timed_out),
         "process_failures": len(process_failures),
-        "reliability_passes": reliability_passes,
-        "reliability_failures": reliability_failures,
-        "runs_without_assessment": len(records) - len(assessments),
-        "elapsed_seconds": {
-            "measurement_count": len(elapsed),
-            "mean": round(mean(elapsed), 3) if elapsed else None,
-        },
-        "model_load_ms": {
-            "measurement_count": len(load_times),
-            "mean": round(mean(load_times), 3) if load_times else None,
-        },
-        "prompt_tokens_per_second": {
-            "measurement_count": len(prompt_speeds),
-            "mean": round(mean(prompt_speeds), 3) if prompt_speeds else None,
-        },
-        "generation_tokens_per_second": {
-            "measurement_count": len(generation_speeds),
-            "mean": round(mean(generation_speeds), 3) if generation_speeds else None,
-        },
+        "reliability_passes": passes,
+        "reliability_warnings": warnings,
+        "reliability_failures": failures,
+        "runs_without_assessment": sum(s is None for s in reliability),
+        "elapsed_seconds": _stats(elapsed_values),
+        "model_load_ms": _stats(model_load),
+        "prompt_tokens_per_second": _stats(prompt_speeds),
+        "generation_tokens_per_second": _stats(generation_speeds),
         "fastest_eligible_run": fastest,
         "selection_note": (
-            "Fastest run selected only from completed runs that pass the heuristic "
-            "gate and contain an explicit generation-speed measurement."
+            "Fastest eligible run selected only from successful processes with PASS reliability and explicit generation speed."
             if fastest is not None else
-            "No eligible configuration: require a completed process, a passing "
-            "heuristic assessment, and an explicit generation-speed measurement."
+            "No eligible configuration: require a completed process, a PASS reliability assessment, and an explicit generation-speed measurement."
         ),
         "limitations": [
-            "A completed process and heuristic pass do not establish semantic correctness.",
-            "Token throughput is reported only when parsed from explicit backend performance logs; it is never estimated from output characters.",
+            "Heuristic checks do not establish semantic correctness.",
+            "Token throughput is included only when explicitly measured by the backend.",
             "CPU and memory usage are not measured by this runner.",
-            "Missing metrics mean the backend did not expose a recognized measurement.",
-            "Legacy log schemas are normalized where possible; absent fields remain unavailable.",
+            "Missing metrics remain unavailable rather than being estimated.",
+            "Legacy records are supported; absent fields remain unavailable.",
         ],
     }
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Summarize BitNet JSON Lines benchmark records.")
-    parser.add_argument("--input", default="results/inference_runs.jsonl",
-                        help="Path to the inference runner JSONL log")
-    parser.add_argument("--output", default="results/benchmark_summary.json",
-                        help="Path to write the summary JSON")
+    parser = argparse.ArgumentParser(description="Summarize reliability-aware BitNet benchmark JSONL.")
+    parser.add_argument("--input", default="results/inference_runs.jsonl")
+    parser.add_argument("--output", default="results/benchmark_summary.json")
     args = parser.parse_args()
     try:
         records = load_records(Path(args.input))

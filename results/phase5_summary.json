@@ -1,0 +1,38 @@
+{
+  "total_runs": 1,
+  "status_counts": {
+    "timeout": 1
+  },
+  "successful_processes": 0,
+  "timed_out_runs": 1,
+  "process_failures": 0,
+  "reliability_passes": 0,
+  "reliability_warnings": 0,
+  "reliability_failures": 0,
+  "runs_without_assessment": 1,
+  "elapsed_seconds": {
+    "measurement_count": 1,
+    "mean": 180.072
+  },
+  "model_load_ms": {
+    "measurement_count": 0,
+    "mean": null
+  },
+  "prompt_tokens_per_second": {
+    "measurement_count": 0,
+    "mean": null
+  },
+  "generation_tokens_per_second": {
+    "measurement_count": 0,
+    "mean": null
+  },
+  "fastest_eligible_run": null,
+  "selection_note": "No eligible configuration: require a completed process, a PASS reliability assessment, and an explicit generation-speed measurement.",
+  "limitations": [
+    "Heuristic checks do not establish semantic correctness.",
+    "Token throughput is included only when explicitly measured by the backend.",
+    "CPU and memory usage are not measured by this runner.",
+    "Missing metrics remain unavailable rather than being estimated.",
+    "Legacy records are supported; absent fields remain unavailable."
+  ]
+}
