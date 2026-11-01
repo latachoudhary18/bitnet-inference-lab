@@ -110,3 +110,143 @@ def test_mixed_question_marks_warns():
 def test_symbols_only_warns():
     r = check_output("#### **** ---- #### **** ---- ####")
     assert r["status"] in (WARNING, FAIL)
+
+
+# ---------- Stage A Phase 3 Upgraded Rules & Guard Tests ----------
+
+def test_repeated_4gram_fails():
+    phrase = "in the dark forest " * 6 + "we found an ancient castle."
+    r = check_output(phrase)
+    assert r["status"] == FAIL
+    assert "repeated_4gram" in r["codes"] or "repeated_phrase" in r["codes"]
+
+
+def test_tail_loop_fails():
+    text = (
+        "The model was trained on a large dataset and then "
+        "and then and then and then and then and then and then."
+    )
+    r = check_output(text)
+    assert r["status"] == FAIL
+    assert "tail_loop" in r["codes"]
+
+
+def test_unspaced_char_ngram_loop_fails():
+    text = "abcdefgabcdefgabcdefgabcdefgabcdefgabcdefg"
+    r = check_output(text)
+    assert r["status"] == FAIL
+    assert "char_ngram_loop" in r["codes"]
+
+
+def test_low_shannon_entropy_fails():
+    # Length > 50 characters, only two alternating characters -> entropy ~1.0 < 2.0
+    text = "abababababababababababababababababababababababababababababababababab."
+    r = check_output(text)
+    assert r["status"] == FAIL
+    assert "low_entropy" in r["codes"] or "low_char_diversity" in r["codes"]
+
+
+def test_nul_byte_fails():
+    r = check_output("Valid sentence with a hidden \x00 NUL byte.")
+    assert r["status"] == FAIL
+    assert "nul_byte" in r["codes"]
+
+
+def test_ansi_escape_warns():
+    r = check_output("Processing output: \x1b[32mSuccess\x1b[0m result completed.")
+    assert r["status"] in (WARNING, FAIL)
+    assert "ansi_escape" in r["codes"]
+
+
+def test_mojibake_warns():
+    r = check_output("The cafÃ© sold crÃªpes and â€œfineâ€\x9d coffee to the Ã©lÃ¨ve.")
+    assert r["status"] in (WARNING, FAIL)
+    assert "mojibake" in r["codes"]
+
+
+def test_clean_utf8_passes():
+    r = check_output("Café résumé façade naïve Straße 日本語 text with valid characters.")
+    assert r["status"] == PASS
+    assert "mojibake" not in r["codes"]
+    assert "non_printable_chars" not in r["codes"]
+
+
+def test_truncated_output_warns():
+    r = check_output("The quick brown fox jumps over the lazy dog and runs into the")
+    assert r["status"] == WARNING
+    assert "truncated_output" in r["codes"]
+
+
+def test_token_cap_reached_downgrades_to_info():
+    # 14 words / tokens without terminal punctuation, requested_tokens=14
+    text = "The quick brown fox jumps over the lazy dog and runs into the wild"
+    r = check_output(text, requested_tokens=14)
+    assert r["status"] == PASS
+    assert "token_cap_reached" in r["codes"]
+    assert "truncated_output" not in r["codes"]
+
+
+def test_poem_with_refrain_does_not_fail():
+    poem = (
+        "The autumn leaves begin to fall,\n"
+        "The winter whispers through the hall.\n"
+        "Listen to the gentle breeze.\n"
+        "The snow will cover every tree,\n"
+        "A frozen world for you and me.\n"
+        "Listen to the gentle breeze.\n"
+    )
+    r = check_output(poem)
+    assert r["status"] != FAIL
+
+
+def test_numbered_list_does_not_fail():
+    guide = (
+        "1. Parse the incoming command line options.\n"
+        "2. Validate the requested file paths.\n"
+        "3. Load the model weights into memory.\n"
+        "4. Execute the forward inference loop.\n"
+    )
+    r = check_output(guide)
+    assert r["status"] != FAIL
+
+
+def test_code_block_does_not_fail():
+    code = (
+        "def compute_total(items: list[int]) -> int:\n"
+        "    total = 0\n"
+        "    for item in items:\n"
+        "        total += item\n"
+        "    return total\n"
+    )
+    r = check_output(code)
+    assert r["status"] != FAIL
+
+
+def test_fenced_code_passes():
+    code = (
+        "```python\n"
+        "def compute_total(items: list[int]) -> int:\n"
+        "    total = 0\n"
+        "    for item in items:\n"
+        "        total += item\n"
+        "    return total\n"
+        "```"
+    )
+    r = check_output(code)
+    assert r["status"] == PASS
+
+
+def test_short_valid_answer_no_entropy_fail():
+    r = check_output("The answer is 42.")
+    # Under 20 chars triggers too_short (tested elsewhere), but must NEVER trigger entropy or diversity failures
+    assert "low_entropy" not in r["codes"]
+    assert "low_char_diversity" not in r["codes"]
+
+
+def test_metrics_and_codes_structure():
+    r = check_output(GOOD)
+    assert isinstance(r["codes"], list)
+    assert isinstance(r["metrics"], dict)
+    assert r["rules_version"] == "1.1"
+    assert "shannon_entropy" in r["metrics"]
+    assert "word_count" in r["metrics"]
