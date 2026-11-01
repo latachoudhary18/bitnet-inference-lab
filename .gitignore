@@ -28,3 +28,11 @@ out.txt
 err.txt
 
 run*.txt
+
+.venv/
+build/
+logs/
+*.exe
+*.dll
+run*.txt
+i2s_*.txt
