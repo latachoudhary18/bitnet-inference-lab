@@ -1,0 +1,35 @@
+{
+  "report_type": "schema_v1.1_run_ranking",
+  "total_runs": 2,
+  "eligible_runs": 0,
+  "excluded_runs": 2,
+  "eligible_configurations": 0,
+  "excluded_configurations": 0,
+  "ranking_metric": null,
+  "winner": null,
+  "ranked_configurations": [],
+  "excluded_runs_detail": [
+    {
+      "threads": null,
+      "ctx_size": null,
+      "reasons": [
+        "Warmup or unspecified warmup status",
+        "Execution was not successful",
+        "Exit code was not zero",
+        "Reliability status was not PASS"
+      ]
+    },
+    {
+      "threads": 4,
+      "ctx_size": 512,
+      "reasons": [
+        "Warmup or unspecified warmup status",
+        "Execution was not successful",
+        "Exit code was not zero",
+        "Reliability status was not PASS"
+      ]
+    }
+  ],
+  "excluded_configurations_detail": [],
+  "selection_note": "No eligible winner: no qualifying configuration has a measured throughput or elapsed-time value."
+}
