@@ -12,9 +12,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_DIR = PROJECT_ROOT / "results"
 
-DEFAULT_BITNET_CLI = Path(
-    r"C:\Users\Lata\source\repos\BitNet\build\bin\Release\llama-cli.exe"
-)
+DEFAULT_BITNET_CLI = Path("llama-cli.exe")  # override with the BITNET_CLI environment variable
 
 
 def run_powershell(command):
