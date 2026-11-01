@@ -1,8 +1,8 @@
-\# Phase 1: Research and Project Setup
+﻿\# Phase 1: Research and Project Setup
 
 
 
-\## Project goal
+## Project goal
 
 Measure BitNet b1.58 inference speed and also check that the output is sane,
 
@@ -10,7 +10,7 @@ so we only compare speeds when the output is trustworthy.
 
 
 
-\## Why BitNet b1.58
+## Why BitNet b1.58
 
 \- BitNet b1.58 was chosen because its ternary weights (-1, 0, +1) use far less
 
@@ -22,7 +22,7 @@ so we only compare speeds when the output is trustworthy.
 
 
 
-\## Research questions
+## Research questions
 
 1\. Can the official build run a BitNet b1.58 model and give readable output?
 
@@ -34,7 +34,7 @@ so we only compare speeds when the output is trustworthy.
 
 
 
-\## Scope and limits
+## Scope and limits
 
 \- CPU only: 13th Gen Intel Core i5-1334U (10 cores, 12 logical processors),
 
@@ -46,7 +46,7 @@ so we only compare speeds when the output is trustworthy.
 
 
 
-\## Tools
+## Tools
 
 \- Model family: BitNet b1.58
 
@@ -60,7 +60,7 @@ so we only compare speeds when the output is trustworthy.
 
 
 
-\## Phase plan
+## Phase plan
 
 | Phase | Topic | Status |
 
@@ -72,7 +72,7 @@ so we only compare speeds when the output is trustworthy.
 
 | 3 | Inference investigation | Pushed, no valid baseline yet |
 
-| 4 | Runner and logging | In progress |
+| 4 | Runner and logging | Pushed |
 
 | 5 | Reliability and ranking | Pushed |
 
@@ -82,7 +82,7 @@ so we only compare speeds when the output is trustworthy.
 
 
 
-\## Current status
+## Current status
 
 \- No successful, trustworthy inference baseline has been established.
 
@@ -94,7 +94,7 @@ so we only compare speeds when the output is trustworthy.
 
 
 
-\## References
+## References
 
 \- Ma et al., "The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits" (2024). Citation to be verified.
 
