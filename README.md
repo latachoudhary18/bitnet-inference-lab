@@ -163,3 +163,7 @@ This repository's original project code is licensed under the MIT License; see
 [LICENSE](LICENSE). The license does not relicense Microsoft BitNet, model
 weights, third-party dependencies, or other separately licensed material.
 Review each upstream component's terms before redistributing it.
+
+## Project background
+See docs/phase1_research_and_setup.md for the goal and scope, and docs/setup_guide.md for setup.
+
