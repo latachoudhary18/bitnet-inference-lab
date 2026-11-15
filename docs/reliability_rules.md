@@ -33,8 +33,8 @@ The overall status is the worst status triggered, and every triggered reason and
 | **Process** | Timeout or non-zero exit code | FAIL | `timeout`, `nonzero_exit` |
 | **Input Type** | Output is not text (e.g. a number) | FAIL | `invalid_type` |
 | **Completeness** | Empty or whitespace-only output (after prompt stripping) | FAIL | `empty_output` |
-| **Quantization Defect** | Only `?` characters, or $\ge 80\%$ `?` | FAIL | `only_question_marks`, `mostly_question_marks` |
-| **Quantization Defect** | $30\% - 79\%$ `?` characters | WARNING | `many_question_marks` |
+| **Degenerate Output (Question Marks)** | Only `?` characters, or $\ge 80\%$ `?` | FAIL | `only_question_marks`, `mostly_question_marks` |
+| **Degenerate Output (Question Marks)** | $30\% - 79\%$ `?` characters | WARNING | `many_question_marks` |
 | **Encoding** | $\ge 50\%$ U+FFFD replacement characters | FAIL | `replacement_chars` |
 | **Encoding** | $10\% - 49\%$ U+FFFD replacement characters | WARNING | `replacement_chars` |
 | **Repetition** | Single character repeated across output ($\ge 5$ chars) | FAIL | `single_char_repeat` |

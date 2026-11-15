@@ -191,7 +191,7 @@ Models frequently answer normally for the first 10 tokens and then lock into a r
   - Cycles $\ge 2 \implies$ **`WARNING:tail_loop`**
 
 ### 4. Question-Mark Degradation Filter
-The characteristic symptom of the BitNet I2_S GGUF weight mapping defect is an immediate stream of ASCII question marks.
+The characteristic symptom of severe generation failure observed in initial BitNet I2_S GGUF runs is an immediate stream of ASCII question marks.
 - $q\_ratio = \frac{\text{count}('?')}{\text{non\_space\_chars}}$
 - $q\_ratio == 1.0 \implies$ **`FAIL:only_question_marks`**
 - $q\_ratio \ge 0.80 \implies$ **`FAIL:mostly_question_marks`**
@@ -350,7 +350,7 @@ run_inference(..., command_prefix=[sys.executable, str(FAKE_CLI_PATH)])
 
 The stub emulates 9 distinct operational scenarios via `--mode`:
 1. `normal`: Outputs clean text and realistic `llama_perf_context_print` timing lines to `stderr`.
-2. `question_marks`: Emits repeated `?` characters with exit code 0 to verify quantization defect gating.
+2. `question_marks`: Emits repeated `?` characters with exit code 0 to verify degenerate question-mark output gating.
 3. `empty`: Emits nothing on stdout.
 4. `garbled`: Emits `\ufffd` replacement characters and invalid byte sequences.
 5. `hang`: Sleeps indefinitely to test timeout handling and process tree killing.
@@ -511,7 +511,7 @@ In all runs, `llama-completion` emitted the following stderr diagnostic:
 warning: missing pre-tokenizer type; fallback to 'default'
 GENERATION QUALITY WILL BE DEGRADED
 ```
-This proves that the BitNet GGUF model files lack the required pre-tokenizer metadata in their GGUF headers, causing the tokenizer to fragment tokens incorrectly before generation begins.
+While this warning was observed directly in stderr during our runs, the causal explanation remains under investigation. Upstream issue [microsoft/BitNet#684](https://github.com/microsoft/BitNet/issues/684) reports that for the specific official BitNet-b1.58-2B-4T GGUF model discussed in that issue, the `tokenizer.ggml.pre` metadata key is missing from the GGUF header, causing the runtime to fall back to the default pre-tokenizer instead of the intended `llama-bpe` pre-tokenizer. Reports in that issue suggest this fallback leads to suboptimal token fragmentation, though this factor is investigated as part of our ablation rather than assumed as an established universal cause across all BitNet GGUF models.
 
 ### Hardware Ranking Status: Zero False Claims
 Running [`scripts/configuration_ranking.py`](file:///d:/bitnet/bitnet-inference-lab/scripts/configuration_ranking.py) against the repository's real execution logs produces:
@@ -539,9 +539,15 @@ The lab honestly declares **no winning hardware configuration** because the unde
 
 ### Limitations
 - **Heuristic vs Semantic Correctness:** The reliability checker enforces syntax and statistical sanity (entropy, repetitions, byte encoding). It does not guarantee that the factual answer is correct (e.g., if the model coherently answers that Paris is the capital of Germany, the heuristics will pass).
-- **Missing Kernel Fix:** Full resolution depends on Microsoft updating `bitnet.cpp` and regenerating GGUF weights with correct pre-tokenizer metadata.
+- **Investigated Upstream Factors:** Output quality is being investigated through two reported upstream factors:
+  1. FFN activation function mismatch in `bitnet.cpp` (reported in [microsoft/BitNet#588](https://github.com/microsoft/BitNet/issues/588) and [#602](https://github.com/microsoft/BitNet/issues/602)).
+  2. Missing pre-tokenizer metadata (`tokenizer.ggml.pre`) in the GGUF header (reported in [microsoft/BitNet#684](https://github.com/microsoft/BitNet/issues/684)).
+  Separately, model file integrity regarding the disputed claim of all-zero MLP weights ([microsoft/BitNet#608](https://github.com/microsoft/BitNet/issues/608)) continues to be investigated empirically.
 
 ### Next Steps for Engineers
-1. **Upstream Monitoring:** Track [microsoft/BitNet#608](https://github.com/microsoft/BitNet/issues/608) and pull updated C++ kernels when published.
+1. **Upstream Monitoring & Ablation:**
+   - Run the FFN activation ablation in bitnet.cpp, investigating the reported mismatch (tracking issues #588 and #602).
+   - Test pre-tokenizer metadata override (`tokenizer.ggml.pre` = `llama-bpe`) for the BitNet b1.58 2B-4T model (tracking issue #684).
+   - Continue empirical verification of model file tensor weights regarding the disputed claim in issue #608.
 2. **Memory Utilization:** Activate the optional `psutil` sampling thread in `scripts/inference_runner.py` to record true Peak Resident Set Size (RSS) during prompt evaluation.
 3. **Execution Sweep:** When clean model weights are available, run `python -m scripts.benchmark_sweep` across threads $t \in [1, 2, 4, 8, 12]$ and context sizes $c \in [128, 256, 512, 1024]$ to map the hardware Pareto efficiency frontier on Intel Core CPUs.
