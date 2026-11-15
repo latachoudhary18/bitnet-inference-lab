@@ -9,7 +9,7 @@
 
 ## Validation performed on this snapshot
 
-- Full automated test suite: 38 tests passed.
+- Full automated test suite: 85 tests passed (verified locally on 2026-11-01).
 - Synthetic integration scenarios cover good-looking output, suspicious question marks, process error, timeout, and missing executable/model.
 - The benchmark summary was regenerated from `results/benchmark_log.jsonl` with the current `scripts/benchmark_report.py`.
 

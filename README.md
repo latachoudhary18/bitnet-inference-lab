@@ -1,4 +1,4 @@
-# BitNet Hardware-Aware and Reliability-Aware Inference Lab
+﻿# BitNet Hardware-Aware and Reliability-Aware Inference Lab
 
 A research/miniproject prototype for recording BitNet inference runs, checking
 basic output reliability, and summarizing benchmark results. The framework is
@@ -165,5 +165,4 @@ weights, third-party dependencies, or other separately licensed material.
 Review each upstream component's terms before redistributing it.
 
 ## Project background
-See docs/phase1_research_and_setup.md for the goal and scope, and docs/setup_guide.md for setup.
-
+See [project background](docs/project_background.md) for the goal and scope, and [setup guide](docs/setup_guide.md) for setup.
