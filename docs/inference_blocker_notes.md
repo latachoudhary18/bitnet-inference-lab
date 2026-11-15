@@ -26,7 +26,7 @@ Common settings: -t 4 -c 128 --temp 0 --seed 42 -no-cnv (via llama-completion.ex
 
 Errors seen earlier: llama-cli rejected --no-conversation (use llama-completion); my first run omitted -no-cnv, entered chat mode and crashed (exit -1073740791) on Lata's machine.
 
-Stderr warning in all runs: "missing pre-tokenizer type ... GENERATION QUALITY WILL BE DEGRADED" (unexplained).
+Stderr warning in all runs: "missing pre-tokenizer type ... GENERATION QUALITY WILL BE DEGRADED" (investigated under upstream issue #684, which reports missing pre-tokenizer metadata in the GGUF header).
 
 Not done: F32 comparison (no F32 file available). Speeds from single runs are not benchmarks.
 
