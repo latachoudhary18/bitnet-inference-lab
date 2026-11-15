@@ -63,10 +63,11 @@ python -m scripts.inference_runner `
 Every run automatically appends a Schema v1.1 record to `results/inference_runs.jsonl`.
 
 #### Diagnosis Checklist
-- [ ] Check if the `?` issue in I2_S is caused by the BitNet quantizer mismatch / kernel issue (refer to upstream issue [microsoft/BitNet#608](https://github.com/microsoft/BitNet/issues/608)).
+- [ ] **Model Integrity Investigation (Issue #608):** Empirically investigate the reported, disputed claim that released BitNet model files contain all-zero MLP weights (verify whether tensors contain non-zero weights without assuming the claim is true).
+- [ ] **FFN Activation Ablation (Issues #588 & #602):** Test whether FFN activation function mismatch in `bitnet.cpp` causes output degeneration or repetition loops.
+- [ ] **Pre-Tokenizer Metadata Ablation (Issue #684):** Test whether missing pre-tokenizer metadata in the GGUF header causes incorrect subword tokenization and degraded generation quality.
 - [ ] Check if `llama-cli` prints warning/error lines in stderr (e.g. tokenizer vocab size mismatch, missing tensor).
-- [ ] Compare F32 output vs I2_S output for coherence on standard prompts.
-- [ ] Log findings in `results/inference_diagnosis_report.md` (or update `results/baseline_status.txt` and `results/f32_experiment.txt`).
+- [ ] Log findings in `results/inference_diagnosis_report.md` (or update `results/baseline_status.txt`).
 - [ ] **Crucial Rule:** If inference fails, report it truthfully. Never fabricate a performance baseline or claim speedups on garbled text.
 
 ---
